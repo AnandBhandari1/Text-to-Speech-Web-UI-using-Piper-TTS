@@ -6,6 +6,8 @@ from pathlib import Path
 import time
 import re
 import random
+import wave
+import io
 
 # Voice configurations
 VOICE_CONFIGS = [
@@ -307,23 +309,7 @@ if st.button("🔊 Generate Audio", type="primary", use_container_width=True):
 if 'last_audio' in st.session_state:
     st.markdown("---")
     st.markdown("### Generated Audio")
-    col1, col2 = st.columns([3, 1])
-    
-    with col1:
-        st.audio(st.session_state.last_audio, format="audio/wav")
-    
-    with col2:
-        model_name = st.session_state.last_model["name"].replace(" ", "_")
-        st.download_button(
-            label="📥 Download Audio",
-            data=st.session_state.last_audio,
-            file_name=f"piper_tts_{model_name}.wav",
-            mime="audio/wav",
-            use_container_width=True
-        )
-    
-    with st.expander("Show Text Used"):
-        st.text(st.session_state.last_text)
+    st.audio(st.session_state.last_audio, format="audio/wav")
 
 # All voices output section
 if 'all_voices_audio' in st.session_state and st.session_state.all_voices_audio:
@@ -332,7 +318,7 @@ if 'all_voices_audio' in st.session_state and st.session_state.all_voices_audio:
     
     # Create a table for all voices
     for voice_name, voice_data in st.session_state.all_voices_audio.items():
-        col1, col2, col3 = st.columns([2, 3, 1])
+        col1, col2 = st.columns([1, 3])
         with col1:
             st.markdown(f"""
             <p class='voice-name'>{voice_name}</p>
@@ -340,14 +326,6 @@ if 'all_voices_audio' in st.session_state and st.session_state.all_voices_audio:
             """, unsafe_allow_html=True)
         with col2:
             st.audio(voice_data["audio"], format="audio/wav")
-        with col3:
-            st.download_button(
-                label="📥 Download",
-                data=voice_data["audio"],
-                file_name=f"piper_tts_{voice_name.replace(' ', '_')}.wav",
-                mime="audio/wav",
-                key=f"download_{voice_name}"
-            ) 
 
 # Mixed voices output section
 if 'mixed_voices_audio' in st.session_state and st.session_state.mixed_voices_audio:
@@ -357,24 +335,47 @@ if 'mixed_voices_audio' in st.session_state and st.session_state.mixed_voices_au
     # Create a table for sentences with different voices
     for i, sentence_data in enumerate(st.session_state.mixed_voices_audio, 1):
         st.markdown(f"#### Sentence {i}")
-        col1, col2, col3 = st.columns([2, 3, 1])
+        col1, col2 = st.columns([1, 3])
         
         with col1:
             st.markdown(f"""
             <p class='voice-name'>{sentence_data['voice']}</p>
             <p class='voice-quality'>{sentence_data['config']['quality'].title()} Quality • {sentence_data['config']['gender'].title()}</p>
             """, unsafe_allow_html=True)
-            with st.expander("Show Text"):
-                st.text(sentence_data['sentence'])
         
         with col2:
             st.audio(sentence_data['audio'], format="audio/wav")
-        
-        with col3:
-            st.download_button(
-                label="📥 Download",
-                data=sentence_data['audio'],
-                file_name=f"piper_tts_sentence_{i}_{sentence_data['voice'].replace(' ', '_')}.wav",
-                mime="audio/wav",
-                key=f"download_sentence_{i}"
-            ) 
+    
+    # Join audio button
+    if st.button("🔗 Join All Audio", type="primary", use_container_width=True):
+        try:
+            with st.spinner("Joining audio files..."):
+                # Function to get wav params from bytes
+                def get_wav_params(audio_bytes):
+                    with wave.open(io.BytesIO(audio_bytes), 'rb') as wav:
+                        return wav.getparams()
+                
+                # Get parameters from first audio file
+                first_params = get_wav_params(st.session_state.mixed_voices_audio[0]['audio'])
+                
+                # Create output wave file
+                output_bytes = io.BytesIO()
+                with wave.open(output_bytes, 'wb') as output:
+                    output.setparams(first_params)
+                    
+                    # Write each audio file's data
+                    for sentence_data in st.session_state.mixed_voices_audio:
+                        with wave.open(io.BytesIO(sentence_data['audio']), 'rb') as wav:
+                            output.writeframes(wav.readframes(wav.getnframes()))
+                
+                # Store the joined audio in session state
+                st.session_state.joined_audio = output_bytes.getvalue()
+                st.success("Audio files joined successfully!")
+        except Exception as e:
+            st.error("Failed to join audio files. Please try again.")
+
+# Joined audio output section
+if 'joined_audio' in st.session_state:
+    st.markdown("---")
+    st.markdown("### Complete Audio")
+    st.audio(st.session_state.joined_audio, format="audio/wav") 
