@@ -312,6 +312,71 @@ def create_silence(duration_seconds, sample_rate, num_channels):
     num_samples = int(duration_seconds * sample_rate)
     return np.zeros(num_samples * num_channels, dtype=np.int16)
 
+def generate_single_voice_with_gaps(text, model_info):
+    try:
+        sentences = split_into_sentences(text)
+        if not sentences:
+            return None
+            
+        # Generate audio for each sentence
+        audio_segments = []
+        progress_bar = st.progress(0)
+        
+        for i, sentence in enumerate(sentences):
+            audio_bytes = generate_audio(sentence, model_info)
+            if audio_bytes:
+                with io.BytesIO(audio_bytes) as bio:
+                    with wave.open(bio, 'rb') as wav:
+                        if not audio_segments:  # First segment
+                            target_sample_rate = wav.getframerate()
+                            target_channels = wav.getnchannels()
+                            target_sampwidth = wav.getsampwidth()
+                        frames = wav.readframes(wav.getnframes())
+                        audio_segments.append({
+                            'frames': frames,
+                            'sample_rate': wav.getframerate(),
+                            'channels': wav.getnchannels(),
+                            'sampwidth': wav.getsampwidth()
+                        })
+            progress_bar.progress((i + 1) / len(sentences))
+        
+        if not audio_segments:
+            return None
+            
+        # Create output wave file with gaps
+        output_bytes = io.BytesIO()
+        with wave.open(output_bytes, 'wb') as output:
+            output.setnchannels(target_channels)
+            output.setsampwidth(target_sampwidth)
+            output.setframerate(target_sample_rate)
+            
+            # Create 1-second silence
+            silence = create_silence(1.0, target_sample_rate, target_channels)
+            
+            # Write each audio segment with silence in between
+            for i, segment in enumerate(audio_segments):
+                # Convert frames to numpy array
+                audio_data = np.frombuffer(segment['frames'], dtype=np.int16)
+                
+                # If sample rates don't match, we need to resample
+                if segment['sample_rate'] != target_sample_rate:
+                    ratio = target_sample_rate / segment['sample_rate']
+                    new_length = int(len(audio_data) * ratio)
+                    indices = np.linspace(0, len(audio_data) - 1, new_length)
+                    audio_data = np.interp(indices, np.arange(len(audio_data)), audio_data)
+                
+                # Write the audio segment
+                output.writeframes(audio_data.astype(np.int16).tobytes())
+                
+                # Add silence after each segment except the last one
+                if i < len(audio_segments) - 1:
+                    output.writeframes(silence.tobytes())
+        
+        return output_bytes.getvalue()
+    except Exception as e:
+        st.error(f"Error: {str(e)}")
+        return None
+
 # Verify piper installation
 if not PIPER_DIR.exists():
     st.error(f"Piper directory not found at {PIPER_DIR}")
@@ -380,6 +445,19 @@ with st.sidebar:
                     st.success(f"Generated audio for {len(sentence_audios)} sentences!")
                 else:
                     st.error("Failed to generate mixed voices audio.")
+        else:
+            st.warning("Please enter text first!")
+    
+    # Generate with single voice and gaps button
+    if st.button("🎵 Generate with Gaps", use_container_width=True):
+        if 'current_text' in st.session_state and st.session_state.current_text:
+            with st.spinner("Generating audio with gaps..."):
+                joined_audio = generate_single_voice_with_gaps(st.session_state.current_text, model_info)
+                if joined_audio:
+                    st.session_state.joined_audio = joined_audio
+                    st.success("Audio generated successfully!")
+                else:
+                    st.error("Failed to generate audio.")
         else:
             st.warning("Please enter text first!")
     
