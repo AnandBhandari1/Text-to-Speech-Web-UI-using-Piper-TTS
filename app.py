@@ -5,6 +5,73 @@ import subprocess
 from pathlib import Path
 import time
 
+# Voice configurations
+VOICE_CONFIGS = [
+    {
+        "id": "en_US-hfc_female-medium",
+        "name": "HFC Female (Medium)",
+        "file": "en_US-hfc_female-medium.onnx",
+        "quality": "medium",
+        "gender": "female"
+    },
+    {
+        "id": "en_US-ljspeech-high",
+        "name": "LJSpeech (High)",
+        "file": "en_US-ljspeech-high.onnx",
+        "quality": "high",
+        "gender": "female"
+    },
+    {
+        "id": "en_GB-cori-high",
+        "name": "Cori (High)",
+        "file": "en_GB-cori-high.onnx",
+        "quality": "high",
+        "gender": "female"
+    },
+    {
+        "id": "en_US-amy-medium",
+        "name": "Amy (Medium)",
+        "file": "en_US-amy-medium.onnx",
+        "quality": "medium",
+        "gender": "female"
+    },
+    {
+        "id": "en_US-bryce-medium",
+        "name": "Bryce (Medium)",
+        "file": "en_US-bryce-medium.onnx",
+        "quality": "medium",
+        "gender": "male"
+    },
+    {
+        "id": "en_US-danny-low",
+        "name": "Danny (Low)",
+        "file": "en_US-danny-low.onnx",
+        "quality": "low",
+        "gender": "male"
+    },
+    {
+        "id": "en_US-hfc_male-medium",
+        "name": "HFC Male (Medium)",
+        "file": "en_US-hfc_male-medium.onnx",
+        "quality": "medium",
+        "gender": "male"
+    },
+    {
+        "id": "en_US-lessac-high",
+        "name": "Lessac (High)",
+        "file": "en_US-lessac-high.onnx",
+        "quality": "high",
+        "gender": "female"
+    },
+    {
+        "id": "en_US-ryan-high",
+        "name": "Ryan (High)",
+        "file": "en_US-ryan-high.onnx",
+        "quality": "high",
+        "gender": "male"
+    }
+]
+
 st.set_page_config(
     page_title="Piper Text-to-Speech",
     page_icon="🔊",
@@ -30,6 +97,10 @@ st.markdown("""
         font-weight: bold;
         color: #1E88E5;
     }
+    .voice-quality {
+        font-size: 0.8em;
+        color: #666;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -41,39 +112,33 @@ MODELS_DIR = PIPER_DIR / "models"
 
 # Get available models
 def get_available_models():
-    models = []
+    available_models = {}
     
     # Check models directory
     if MODELS_DIR.exists():
-        for model in MODELS_DIR.glob("*.onnx"):
-            # Get the corresponding JSON file
-            json_file = model.with_suffix('.onnx.json')
-            if json_file.exists():
-                # Use the same name format as the working model
-                new_name = f"en_US-{model.stem}"
-                models.append((new_name, model))
+        for voice in VOICE_CONFIGS:
+            model_path = MODELS_DIR / voice["file"]
+            json_path = model_path.with_suffix('.onnx.json')
+            if model_path.exists() and json_path.exists():
+                available_models[voice["name"]] = {
+                    "path": model_path,
+                    "config": voice
+                }
     
-    # Create a dictionary with clean names
-    model_dict = {}
-    for name, model in models:
-        # Clean up name for display
-        display_name = name.replace("-", " ").replace("_", " ")
-        model_dict[display_name] = model
-    
-    return model_dict
+    return available_models
 
-def generate_audio(text, model_path):
+def generate_audio(text, model_info):
     try:
         # Create a temporary file for the output
         temp_dir = Path(tempfile.gettempdir())
-        output_file = temp_dir / f"output_{int(time.time())}_{model_path.stem}.wav"
+        output_file = temp_dir / f"output_{int(time.time())}_{model_info['config']['id']}.wav"
         
         # Prepare piper command
         piper_cmd = [
             str(PIPER_DIR / "piper.exe"),
-            "--model", str(model_path),
+            "--model", str(model_info["path"]),
             "--output_file", str(output_file),
-            "--json_config", str(model_path.with_suffix('.onnx.json'))
+            "--json_config", str(model_info["path"].with_suffix('.onnx.json'))
         ]
         
         # Create process
@@ -116,10 +181,17 @@ with st.sidebar:
     selected_model_name = st.selectbox(
         "Select Voice",
         options=list(available_models.keys()),
-        help="Choose a voice model for text-to-speech conversion"
+        help="Choose a voice model for text-to-speech conversion",
+        index=list(available_models.keys()).index("HFC Female (Medium)" if "HFC Female (Medium)" in available_models else 0)
     )
     
-    model_path = available_models[selected_model_name]
+    model_info = available_models[selected_model_name]
+    
+    # Show voice details
+    st.markdown(f"""
+    **Quality:** {model_info['config']['quality'].title()}  
+    **Gender:** {model_info['config']['gender'].title()}
+    """)
     
     st.markdown("---")
     
@@ -129,10 +201,13 @@ with st.sidebar:
             with st.spinner("Generating audio in all voices..."):
                 all_audios = {}
                 progress_bar = st.progress(0)
-                for i, (name, model) in enumerate(available_models.items()):
-                    audio_bytes = generate_audio(st.session_state.current_text, model)
+                for i, (name, info) in enumerate(available_models.items()):
+                    audio_bytes = generate_audio(st.session_state.current_text, info)
                     if audio_bytes:
-                        all_audios[name] = audio_bytes
+                        all_audios[name] = {
+                            "audio": audio_bytes,
+                            "config": info["config"]
+                        }
                     progress_bar.progress((i + 1) / len(available_models))
                 st.session_state.all_voices_audio = all_audios
                 st.success(f"Generated audio in {len(all_audios)} voices!")
@@ -163,11 +238,11 @@ if st.button("🔊 Generate Audio", type="primary", use_container_width=True):
     if text_input:
         try:
             with st.spinner("Generating audio..."):
-                audio_bytes = generate_audio(text_input, model_path)
+                audio_bytes = generate_audio(text_input, model_info)
                 if audio_bytes:
                     st.session_state.last_audio = audio_bytes
                     st.session_state.last_text = text_input
-                    st.session_state.last_model = selected_model_name
+                    st.session_state.last_model = model_info["config"]
                     st.success("Audio generated successfully!")
                 else:
                     st.error("Failed to generate audio. Please try again or choose a different voice.")
@@ -186,7 +261,7 @@ if 'last_audio' in st.session_state:
         st.audio(st.session_state.last_audio, format="audio/wav")
     
     with col2:
-        model_name = st.session_state.get('last_model', 'output').replace(" ", "_")
+        model_name = st.session_state.last_model["name"].replace(" ", "_")
         st.download_button(
             label="📥 Download Audio",
             data=st.session_state.last_audio,
@@ -204,16 +279,19 @@ if 'all_voices_audio' in st.session_state and st.session_state.all_voices_audio:
     st.markdown("### All Voices")
     
     # Create a table for all voices
-    for voice_name, audio_data in st.session_state.all_voices_audio.items():
+    for voice_name, voice_data in st.session_state.all_voices_audio.items():
         col1, col2, col3 = st.columns([2, 3, 1])
         with col1:
-            st.markdown(f"<p class='voice-name'>{voice_name}</p>", unsafe_allow_html=True)
+            st.markdown(f"""
+            <p class='voice-name'>{voice_name}</p>
+            <p class='voice-quality'>{voice_data['config']['quality'].title()} Quality • {voice_data['config']['gender'].title()}</p>
+            """, unsafe_allow_html=True)
         with col2:
-            st.audio(audio_data, format="audio/wav")
+            st.audio(voice_data["audio"], format="audio/wav")
         with col3:
             st.download_button(
                 label="📥 Download",
-                data=audio_data,
+                data=voice_data["audio"],
                 file_name=f"piper_tts_{voice_name.replace(' ', '_')}.wav",
                 mime="audio/wav",
                 key=f"download_{voice_name}"
