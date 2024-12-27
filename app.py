@@ -8,6 +8,8 @@ import re
 import random
 import wave
 import io
+import numpy as np
+from scipy.io import wavfile
 
 # Voice configurations
 VOICE_CONFIGS = [
@@ -175,17 +177,24 @@ def generate_mixed_voices_audio(text):
     if not sentences:
         return None
     
-    # Get list of available models
+    # Get list of available models in the same order as VOICE_CONFIGS
     available_models = get_available_models()
-    model_list = list(available_models.items())
+    ordered_models = []
+    for voice in VOICE_CONFIGS:
+        if voice["name"] in available_models:
+            ordered_models.append((voice["name"], available_models[voice["name"]]))
     
-    # Generate audio for each sentence with a different voice
+    if not ordered_models:
+        return None
+    
+    # Generate audio for each sentence with voices in sequence
     sentence_audios = []
     progress_bar = st.progress(0)
     
     for i, sentence in enumerate(sentences):
-        # Pick a random voice for this sentence
-        voice_name, voice_info = random.choice(model_list)
+        # Use voice in sequence, loop back to start if needed
+        voice_index = i % len(ordered_models)
+        voice_name, voice_info = ordered_models[voice_index]
         
         # Generate audio for this sentence
         audio_bytes = generate_audio(sentence, voice_info)
@@ -288,7 +297,7 @@ text_input = st.text_area(
     on_change=lambda: setattr(st.session_state, 'current_text', st.session_state.text_input)
 )
 
-if st.button("🔊 Generate Audio", type="primary", use_container_width=True):
+if st.button("���� Generate Audio", type="primary", use_container_width=True):
     if text_input:
         try:
             with st.spinner("Generating audio..."):
@@ -350,29 +359,57 @@ if 'mixed_voices_audio' in st.session_state and st.session_state.mixed_voices_au
     if st.button("🔗 Join All Audio", type="primary", use_container_width=True):
         try:
             with st.spinner("Joining audio files..."):
-                # Function to get wav params from bytes
-                def get_wav_params(audio_bytes):
-                    with wave.open(io.BytesIO(audio_bytes), 'rb') as wav:
-                        return wav.getparams()
+                # Read all audio files and their parameters
+                audio_segments = []
+                target_sample_rate = None
                 
-                # Get parameters from first audio file
-                first_params = get_wav_params(st.session_state.mixed_voices_audio[0]['audio'])
+                # First pass: read all files and determine target sample rate
+                for sentence_data in st.session_state.mixed_voices_audio:
+                    with io.BytesIO(sentence_data['audio']) as bio:
+                        with wave.open(bio, 'rb') as wav:
+                            if target_sample_rate is None:
+                                target_sample_rate = wav.getframerate()
+                                target_channels = wav.getnchannels()
+                                target_sampwidth = wav.getsampwidth()
+                            
+                            # Read the frames
+                            frames = wav.readframes(wav.getnframes())
+                            audio_segments.append({
+                                'frames': frames,
+                                'sample_rate': wav.getframerate(),
+                                'channels': wav.getnchannels(),
+                                'sampwidth': wav.getsampwidth()
+                            })
                 
                 # Create output wave file
                 output_bytes = io.BytesIO()
                 with wave.open(output_bytes, 'wb') as output:
-                    output.setparams(first_params)
+                    output.setnchannels(target_channels)
+                    output.setsampwidth(target_sampwidth)
+                    output.setframerate(target_sample_rate)
                     
-                    # Write each audio file's data
-                    for sentence_data in st.session_state.mixed_voices_audio:
-                        with wave.open(io.BytesIO(sentence_data['audio']), 'rb') as wav:
-                            output.writeframes(wav.readframes(wav.getnframes()))
+                    # Write each audio segment
+                    for segment in audio_segments:
+                        # Convert frames to numpy array
+                        audio_data = np.frombuffer(segment['frames'], dtype=np.int16)
+                        
+                        # If sample rates don't match, we need to resample
+                        if segment['sample_rate'] != target_sample_rate:
+                            # Calculate resampling ratio
+                            ratio = target_sample_rate / segment['sample_rate']
+                            new_length = int(len(audio_data) * ratio)
+                            # Resample using numpy
+                            indices = np.linspace(0, len(audio_data) - 1, new_length)
+                            audio_data = np.interp(indices, np.arange(len(audio_data)), audio_data)
+                        
+                        # Convert back to bytes and write
+                        output.writeframes(audio_data.astype(np.int16).tobytes())
                 
                 # Store the joined audio in session state
                 st.session_state.joined_audio = output_bytes.getvalue()
                 st.success("Audio files joined successfully!")
         except Exception as e:
-            st.error("Failed to join audio files. Please try again.")
+            st.error(f"Failed to join audio files: {str(e)}")
 
 # Joined audio output section
 if 'joined_audio' in st.session_state:
