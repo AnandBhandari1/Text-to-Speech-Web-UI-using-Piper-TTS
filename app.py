@@ -89,44 +89,38 @@ st.markdown("""
     <style>
     /* Dark theme colors */
     :root {
-        --bg-color: #1E1E1E;
-        --card-bg: #2D2D2D;
-        --text-color: #E0E0E0;
-        --accent-color: #4B9EF5;
-        --border-color: #404040;
-        --header-color: #4B9EF5;
-        --subtext-color: #A0A0A0;
+        --bg-color: #0E1117;
+        --card-bg: #1E1E1E;
+        --text-color: #C6C6C6;
+        --accent-color: #31333F;
+        --border-color: #2D3139;
+        --header-color: #C6C6C6;
+        --subtext-color: #808080;
+        --button-color: #262730;
+        --button-hover: #31333F;
     }
 
     .stApp {
         max-width: 1200px;
         margin: 0 auto;
-        background-color: var(--bg-color);
     }
 
     .main-header {
         text-align: center;
         color: var(--header-color);
         margin-bottom: 2rem;
-        padding: 1.5rem;
-        background: linear-gradient(90deg, #2D2D2D 0%, #252525 100%);
-        border-radius: 10px;
-        border: 1px solid var(--border-color);
     }
 
     .stAudio {
         width: 100%;
         margin: 0.5rem 0;
-        background-color: var(--card-bg);
-        border-radius: 8px;
-        padding: 0.5rem;
     }
 
     .voice-name {
-        font-weight: bold;
-        color: var(--accent-color);
+        font-weight: 500;
+        color: var(--text-color);
         margin: 0;
-        font-size: 1.1em;
+        font-size: 1em;
     }
 
     .voice-quality {
@@ -136,79 +130,55 @@ st.markdown("""
         padding-top: 0.2rem;
     }
 
-    .sentence-header {
-        color: var(--accent-color);
-        font-size: 1.1em;
-        margin: 1rem 0 0.5rem 0;
+    .sentence-text {
+        color: var(--text-color);
+        font-size: 0.9em;
+        margin: 0.5rem 0;
         padding: 0.5rem;
-        background: var(--card-bg);
-        border-radius: 5px;
-        border: 1px solid var(--border-color);
+        background: var(--accent-color);
+        border-radius: 4px;
     }
 
     .section-header {
         color: var(--header-color);
-        padding: 1rem 0;
-        margin: 1rem 0;
-        border-bottom: 2px solid var(--border-color);
+        padding: 0.5rem 0;
+        margin: 0.5rem 0;
+        border-bottom: 1px solid var(--border-color);
     }
 
     .voice-card {
         background: var(--card-bg);
-        padding: 1rem;
-        border-radius: 8px;
+        padding: 0.8rem;
+        border-radius: 4px;
         margin: 0.5rem 0;
         border: 1px solid var(--border-color);
     }
 
     .stButton button {
-        border-radius: 25px;
-        padding: 0.5rem 2rem;
-        font-weight: 500;
-        background-color: var(--accent-color);
-        color: white;
-        border: none;
+        background-color: var(--button-color) !important;
+        border: 1px solid var(--border-color) !important;
+        color: var(--text-color) !important;
     }
 
     .stButton button:hover {
-        background-color: #3B8EE5;
+        background-color: var(--button-hover) !important;
+        border: 1px solid var(--border-color) !important;
     }
 
     .text-area-label {
-        font-size: 1.1em;
         color: var(--header-color);
-        font-weight: 500;
     }
 
     .stTextArea textarea {
-        border-radius: 8px;
-        border: 1px solid var(--border-color);
-        padding: 1rem;
-        font-size: 1.1em;
         background-color: var(--card-bg);
         color: var(--text-color);
-    }
-
-    div[data-testid="stSidebarNav"] {
-        background: var(--card-bg);
-        padding: 1rem;
-        border-radius: 8px;
         border: 1px solid var(--border-color);
-    }
-
-    .about-section {
-        background: var(--card-bg);
-        padding: 1rem;
-        border-radius: 8px;
-        margin-top: 1rem;
-        border: 1px solid var(--border-color);
-        color: var(--text-color);
     }
 
     .voice-info {
         background: var(--card-bg);
         padding: 0.8rem;
-        border-radius: 8px;
+        border-radius: 4px;
         margin: 0.5rem 0;
         border: 1px solid var(--border-color);
         color: var(--text-color);
@@ -224,39 +194,16 @@ st.markdown("""
     }
 
     .stSelectbox div[data-baseweb="select"] {
-        background-color: var(--card-bg);
-        border-color: var(--border-color);
+        background-color: var(--card-bg) !important;
+        border-color: var(--border-color) !important;
     }
 
     .stSelectbox div[data-baseweb="select"] * {
-        color: var(--text-color);
+        color: var(--text-color) !important;
     }
 
-    .stProgress .st-bo {
-        background-color: var(--accent-color);
-    }
-
-    .stProgress .st-bp {
-        background-color: var(--border-color);
-    }
-
-    /* Dark scrollbar */
-    ::-webkit-scrollbar {
-        width: 10px;
-        height: 10px;
-    }
-
-    ::-webkit-scrollbar-track {
-        background: var(--bg-color);
-    }
-
-    ::-webkit-scrollbar-thumb {
-        background: var(--border-color);
-        border-radius: 5px;
-    }
-
-    ::-webkit-scrollbar-thumb:hover {
-        background: var(--accent-color);
+    .stProgress > div > div {
+        background-color: var(--accent-color) !important;
     }
     </style>
 """, unsafe_allow_html=True)
@@ -500,22 +447,20 @@ if 'all_voices_audio' in st.session_state and st.session_state.all_voices_audio:
 if 'mixed_voices_audio' in st.session_state and st.session_state.mixed_voices_audio:
     st.markdown("<h3 class='section-header'>🎲 Mixed Voices</h3>", unsafe_allow_html=True)
     
-    # Create a table for sentences with different voices
-    for i, sentence_data in enumerate(st.session_state.mixed_voices_audio, 1):
-        st.markdown(f"<div class='sentence-header'>✨ Sentence {i}</div>", unsafe_allow_html=True)
-        st.markdown("<div class='voice-card'>", unsafe_allow_html=True)
+    for sentence_data in st.session_state.mixed_voices_audio:
+        # st.markdown("<div class='voice-card'>", unsafe_allow_html=True)
+        # Display sentence text
+        st.markdown(f"<div class='sentence-text'>{sentence_data['sentence']}</div>", unsafe_allow_html=True)
+        # Display voice name and audio
         col1, col2 = st.columns([1, 3])
-        
         with col1:
             st.markdown(f"""
             <p class='voice-name'>{sentence_data['voice']}</p>
-            <p class='voice-quality'>✨ {sentence_data['config']['quality'].title()} Quality<br>
-            👤 {sentence_data['config']['gender'].title()}</p>
+            <p class='voice-quality'>{sentence_data['config']['quality'].title()} • {sentence_data['config']['gender'].title()}</p>
             """, unsafe_allow_html=True)
-        
         with col2:
             st.audio(sentence_data['audio'], format="audio/wav")
-        st.markdown("</div>", unsafe_allow_html=True)
+        # st.markdown("</div>", unsafe_allow_html=True)
     
     # Join audio button
     if st.button("🔗 Join All Audio", type="primary", use_container_width=True):
@@ -576,6 +521,6 @@ if 'mixed_voices_audio' in st.session_state and st.session_state.mixed_voices_au
 # Joined audio output section
 if 'joined_audio' in st.session_state:
     st.markdown("<h3 class='section-header'>🎵 Complete Audio</h3>", unsafe_allow_html=True)
-    st.markdown("<div class='voice-card'>", unsafe_allow_html=True)
+    # st.markdown("<div class='voice-card'>", unsafe_allow_html=True)
     st.audio(st.session_state.joined_audio, format="audio/wav")
-    st.markdown("</div>", unsafe_allow_html=True) 
+    # st.markdown("</div>", unsafe_allow_html=True) 
