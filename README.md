@@ -1,4 +1,4 @@
-# Piper TTS Streamlit App
+# Text-to-Speech Web UI Using Piper TTS
 
 A Streamlit web application for text-to-speech conversion using Piper TTS. This app provides multiple ways to generate speech from text using different voices and styles.
 
