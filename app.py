@@ -4,6 +4,8 @@ import os
 import subprocess
 from pathlib import Path
 import time
+import re
+import random
 
 # Voice configurations
 VOICE_CONFIGS = [
@@ -160,6 +162,42 @@ def generate_audio(text, model_info):
     except Exception as e:
         return None
 
+def split_into_sentences(text):
+    # Split text into sentences using regex
+    sentences = re.split(r'(?<=[.!?])\s+', text.strip())
+    # Remove empty sentences
+    return [s for s in sentences if s.strip()]
+
+def generate_mixed_voices_audio(text):
+    sentences = split_into_sentences(text)
+    if not sentences:
+        return None
+    
+    # Get list of available models
+    available_models = get_available_models()
+    model_list = list(available_models.items())
+    
+    # Generate audio for each sentence with a different voice
+    sentence_audios = []
+    progress_bar = st.progress(0)
+    
+    for i, sentence in enumerate(sentences):
+        # Pick a random voice for this sentence
+        voice_name, voice_info = random.choice(model_list)
+        
+        # Generate audio for this sentence
+        audio_bytes = generate_audio(sentence, voice_info)
+        if audio_bytes:
+            sentence_audios.append({
+                "sentence": sentence,
+                "audio": audio_bytes,
+                "voice": voice_name,
+                "config": voice_info["config"]
+            })
+        progress_bar.progress((i + 1) / len(sentences))
+    
+    return sentence_audios
+
 # Verify piper installation
 if not PIPER_DIR.exists():
     st.error(f"Piper directory not found at {PIPER_DIR}")
@@ -214,6 +252,19 @@ with st.sidebar:
         else:
             st.warning("Please enter text first!")
     
+    # Generate with mixed voices button
+    if st.button("🎲 Mix Voices per Sentence", use_container_width=True):
+        if 'current_text' in st.session_state and st.session_state.current_text:
+            with st.spinner("Generating audio with mixed voices..."):
+                sentence_audios = generate_mixed_voices_audio(st.session_state.current_text)
+                if sentence_audios:
+                    st.session_state.mixed_voices_audio = sentence_audios
+                    st.success(f"Generated audio for {len(sentence_audios)} sentences!")
+                else:
+                    st.error("Failed to generate mixed voices audio.")
+        else:
+            st.warning("Please enter text first!")
+    
     st.markdown("---")
     st.markdown("### About")
     st.markdown("""
@@ -221,7 +272,8 @@ with st.sidebar:
     - Select a voice from the dropdown
     - Enter your text in the text area
     - Click 'Generate Audio' to convert
-    - Or click 'Generate in All Voices' to try all voices
+    - Click 'Generate in All Voices' to try all voices
+    - Click 'Mix Voices per Sentence' for variety
     """)
 
 # Main content
@@ -295,4 +347,34 @@ if 'all_voices_audio' in st.session_state and st.session_state.all_voices_audio:
                 file_name=f"piper_tts_{voice_name.replace(' ', '_')}.wav",
                 mime="audio/wav",
                 key=f"download_{voice_name}"
+            ) 
+
+# Mixed voices output section
+if 'mixed_voices_audio' in st.session_state and st.session_state.mixed_voices_audio:
+    st.markdown("---")
+    st.markdown("### Mixed Voices")
+    
+    # Create a table for sentences with different voices
+    for i, sentence_data in enumerate(st.session_state.mixed_voices_audio, 1):
+        st.markdown(f"#### Sentence {i}")
+        col1, col2, col3 = st.columns([2, 3, 1])
+        
+        with col1:
+            st.markdown(f"""
+            <p class='voice-name'>{sentence_data['voice']}</p>
+            <p class='voice-quality'>{sentence_data['config']['quality'].title()} Quality • {sentence_data['config']['gender'].title()}</p>
+            """, unsafe_allow_html=True)
+            with st.expander("Show Text"):
+                st.text(sentence_data['sentence'])
+        
+        with col2:
+            st.audio(sentence_data['audio'], format="audio/wav")
+        
+        with col3:
+            st.download_button(
+                label="📥 Download",
+                data=sentence_data['audio'],
+                file_name=f"piper_tts_sentence_{i}_{sentence_data['voice'].replace(' ', '_')}.wav",
+                mime="audio/wav",
+                key=f"download_sentence_{i}"
             ) 
