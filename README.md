@@ -4,6 +4,8 @@ A Streamlit web application for text-to-speech conversion using Piper TTS. This 
 
 ⚠️ **IMPORTANT: This application is for personal and non-commercial use only.**
 
+Project Repository: [Text-to-Speech-Web-UI-using-Piper-TTS](https://github.com/AnandBhandari1/Text-to-Speech-Web-UI-using-Piper-TTS)
+
 ![App Screenshot](screenshot.png)
 
 ## Features
@@ -14,6 +16,13 @@ A Streamlit web application for text-to-speech conversion using Piper TTS. This 
   - All Voices: Generate the same text with all available voices
   - Mixed Voices: Generate each sentence with a different voice
   - Single Voice with Gaps: Generate sentences with 1-second gaps between them
+
+## Voice Models
+
+This application supports all voice models from Piper TTS. For a complete list of available voices and their details, please check:
+[Piper TTS Voice List](https://github.com/rhasspy/piper/blob/master/VOICES.md)
+
+You can download any of these voices and place them in your `C:/piper/models/` directory to use them with this application.
 
 ## Disclaimer
 
