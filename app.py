@@ -307,6 +307,11 @@ def generate_mixed_voices_audio(text):
     
     return sentence_audios
 
+def create_silence(duration_seconds, sample_rate, num_channels):
+    # Create silence as a numpy array
+    num_samples = int(duration_seconds * sample_rate)
+    return np.zeros(num_samples * num_channels, dtype=np.int16)
+
 # Verify piper installation
 if not PIPER_DIR.exists():
     st.error(f"Piper directory not found at {PIPER_DIR}")
@@ -495,8 +500,11 @@ if 'mixed_voices_audio' in st.session_state and st.session_state.mixed_voices_au
                     output.setsampwidth(target_sampwidth)
                     output.setframerate(target_sample_rate)
                     
-                    # Write each audio segment
-                    for segment in audio_segments:
+                    # Create 2-second silence
+                    silence = create_silence(1.0, target_sample_rate, target_channels)
+                    
+                    # Write each audio segment with silence in between
+                    for i, segment in enumerate(audio_segments):
                         # Convert frames to numpy array
                         audio_data = np.frombuffer(segment['frames'], dtype=np.int16)
                         
@@ -509,8 +517,12 @@ if 'mixed_voices_audio' in st.session_state and st.session_state.mixed_voices_au
                             indices = np.linspace(0, len(audio_data) - 1, new_length)
                             audio_data = np.interp(indices, np.arange(len(audio_data)), audio_data)
                         
-                        # Convert back to bytes and write
+                        # Write the audio segment
                         output.writeframes(audio_data.astype(np.int16).tobytes())
+                        
+                        # Add silence after each segment except the last one
+                        if i < len(audio_segments) - 1:
+                            output.writeframes(silence.tobytes())
                 
                 # Store the joined audio in session state
                 st.session_state.joined_audio = output_bytes.getvalue()
