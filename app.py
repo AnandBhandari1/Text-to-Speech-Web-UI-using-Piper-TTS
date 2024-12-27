@@ -87,25 +87,176 @@ st.set_page_config(
 # Custom CSS
 st.markdown("""
     <style>
+    /* Dark theme colors */
+    :root {
+        --bg-color: #1E1E1E;
+        --card-bg: #2D2D2D;
+        --text-color: #E0E0E0;
+        --accent-color: #4B9EF5;
+        --border-color: #404040;
+        --header-color: #4B9EF5;
+        --subtext-color: #A0A0A0;
+    }
+
     .stApp {
         max-width: 1200px;
         margin: 0 auto;
+        background-color: var(--bg-color);
     }
+
     .main-header {
         text-align: center;
-        color: #1E88E5;
+        color: var(--header-color);
         margin-bottom: 2rem;
+        padding: 1.5rem;
+        background: linear-gradient(90deg, #2D2D2D 0%, #252525 100%);
+        border-radius: 10px;
+        border: 1px solid var(--border-color);
     }
+
     .stAudio {
         width: 100%;
+        margin: 0.5rem 0;
+        background-color: var(--card-bg);
+        border-radius: 8px;
+        padding: 0.5rem;
     }
+
     .voice-name {
         font-weight: bold;
-        color: #1E88E5;
+        color: var(--accent-color);
+        margin: 0;
+        font-size: 1.1em;
     }
+
     .voice-quality {
-        font-size: 0.8em;
-        color: #666;
+        font-size: 0.85em;
+        color: var(--subtext-color);
+        margin: 0;
+        padding-top: 0.2rem;
+    }
+
+    .sentence-header {
+        color: var(--accent-color);
+        font-size: 1.1em;
+        margin: 1rem 0 0.5rem 0;
+        padding: 0.5rem;
+        background: var(--card-bg);
+        border-radius: 5px;
+        border: 1px solid var(--border-color);
+    }
+
+    .section-header {
+        color: var(--header-color);
+        padding: 1rem 0;
+        margin: 1rem 0;
+        border-bottom: 2px solid var(--border-color);
+    }
+
+    .voice-card {
+        background: var(--card-bg);
+        padding: 1rem;
+        border-radius: 8px;
+        margin: 0.5rem 0;
+        border: 1px solid var(--border-color);
+    }
+
+    .stButton button {
+        border-radius: 25px;
+        padding: 0.5rem 2rem;
+        font-weight: 500;
+        background-color: var(--accent-color);
+        color: white;
+        border: none;
+    }
+
+    .stButton button:hover {
+        background-color: #3B8EE5;
+    }
+
+    .text-area-label {
+        font-size: 1.1em;
+        color: var(--header-color);
+        font-weight: 500;
+    }
+
+    .stTextArea textarea {
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+        padding: 1rem;
+        font-size: 1.1em;
+        background-color: var(--card-bg);
+        color: var(--text-color);
+    }
+
+    div[data-testid="stSidebarNav"] {
+        background: var(--card-bg);
+        padding: 1rem;
+        border-radius: 8px;
+        border: 1px solid var(--border-color);
+    }
+
+    .about-section {
+        background: var(--card-bg);
+        padding: 1rem;
+        border-radius: 8px;
+        margin-top: 1rem;
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+    }
+
+    .voice-info {
+        background: var(--card-bg);
+        padding: 0.8rem;
+        border-radius: 8px;
+        margin: 0.5rem 0;
+        border: 1px solid var(--border-color);
+        color: var(--text-color);
+    }
+
+    /* Override Streamlit's default styles */
+    .stMarkdown {
+        color: var(--text-color);
+    }
+
+    .stSelectbox label {
+        color: var(--text-color) !important;
+    }
+
+    .stSelectbox div[data-baseweb="select"] {
+        background-color: var(--card-bg);
+        border-color: var(--border-color);
+    }
+
+    .stSelectbox div[data-baseweb="select"] * {
+        color: var(--text-color);
+    }
+
+    .stProgress .st-bo {
+        background-color: var(--accent-color);
+    }
+
+    .stProgress .st-bp {
+        background-color: var(--border-color);
+    }
+
+    /* Dark scrollbar */
+    ::-webkit-scrollbar {
+        width: 10px;
+        height: 10px;
+    }
+
+    ::-webkit-scrollbar-track {
+        background: var(--bg-color);
+    }
+
+    ::-webkit-scrollbar-thumb {
+        background: var(--border-color);
+        border-radius: 5px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+        background: var(--accent-color);
     }
     </style>
 """, unsafe_allow_html=True)
@@ -220,7 +371,7 @@ if not (PIPER_DIR / "piper.exe").exists():
 
 # Sidebar for model selection
 with st.sidebar:
-    st.markdown("## Voice Settings")
+    st.markdown("## 🎤 Voice Settings")
     available_models = get_available_models()
     
     if not available_models:
@@ -238,11 +389,15 @@ with st.sidebar:
     
     # Show voice details
     st.markdown(f"""
-    **Quality:** {model_info['config']['quality'].title()}  
-    **Gender:** {model_info['config']['gender'].title()}
-    """)
+    <div class='voice-info'>
+    ✨ **Quality:** {model_info['config']['quality'].title()}<br>
+    👤 **Gender:** {model_info['config']['gender'].title()}
+    </div>
+    """, unsafe_allow_html=True)
     
     st.markdown("---")
+    
+    st.markdown("### 🎯 Actions")
     
     # Generate in all voices button
     if st.button("🎭 Generate in All Voices", use_container_width=True):
@@ -277,18 +432,22 @@ with st.sidebar:
             st.warning("Please enter text first!")
     
     st.markdown("---")
-    st.markdown("### About")
     st.markdown("""
-    This app uses Piper TTS to convert text to speech.
-    - Select a voice from the dropdown
-    - Enter your text in the text area
-    - Click 'Generate Audio' to convert
-    - Click 'Generate in All Voices' to try all voices
-    - Click 'Mix Voices per Sentence' for variety
-    """)
+    <div class='about-section'>
+    <h3>ℹ️ About</h3>
+    <p>This app uses Piper TTS to convert text to speech.</p>
+    <ul>
+    <li>Select a voice from the dropdown</li>
+    <li>Enter your text in the text area</li>
+    <li>Click 'Generate Audio' to convert</li>
+    <li>Click 'Generate in All Voices' to try all voices</li>
+    <li>Click 'Mix Voices per Sentence' for variety</li>
+    </ul>
+    </div>
+    """, unsafe_allow_html=True)
 
 # Main content
-st.markdown("### Enter Text")
+st.markdown("<h3 class='section-header'>✍️ Enter Text</h3>", unsafe_allow_html=True)
 text_input = st.text_area(
     "Type or paste your text here:",
     height=200,
@@ -297,7 +456,7 @@ text_input = st.text_area(
     on_change=lambda: setattr(st.session_state, 'current_text', st.session_state.text_input)
 )
 
-if st.button("���� Generate Audio", type="primary", use_container_width=True):
+if st.button("🔊 Generate Audio", type="primary", use_container_width=True):
     if text_input:
         try:
             with st.spinner("Generating audio..."):
@@ -316,44 +475,47 @@ if st.button("���� Generate Audio", type="primary", use_container_width=
 
 # Single audio output section
 if 'last_audio' in st.session_state:
-    st.markdown("---")
-    st.markdown("### Generated Audio")
+    st.markdown("<h3 class='section-header'>🎵 Generated Audio</h3>", unsafe_allow_html=True)
     st.audio(st.session_state.last_audio, format="audio/wav")
 
 # All voices output section
 if 'all_voices_audio' in st.session_state and st.session_state.all_voices_audio:
-    st.markdown("---")
-    st.markdown("### All Voices")
+    st.markdown("<h3 class='section-header'>🎭 All Voices</h3>", unsafe_allow_html=True)
     
     # Create a table for all voices
     for voice_name, voice_data in st.session_state.all_voices_audio.items():
+        st.markdown("<div class='voice-card'>", unsafe_allow_html=True)
         col1, col2 = st.columns([1, 3])
         with col1:
             st.markdown(f"""
             <p class='voice-name'>{voice_name}</p>
-            <p class='voice-quality'>{voice_data['config']['quality'].title()} Quality • {voice_data['config']['gender'].title()}</p>
+            <p class='voice-quality'>✨ {voice_data['config']['quality'].title()} Quality<br>
+            👤 {voice_data['config']['gender'].title()}</p>
             """, unsafe_allow_html=True)
         with col2:
             st.audio(voice_data["audio"], format="audio/wav")
+        st.markdown("</div>", unsafe_allow_html=True)
 
 # Mixed voices output section
 if 'mixed_voices_audio' in st.session_state and st.session_state.mixed_voices_audio:
-    st.markdown("---")
-    st.markdown("### Mixed Voices")
+    st.markdown("<h3 class='section-header'>🎲 Mixed Voices</h3>", unsafe_allow_html=True)
     
     # Create a table for sentences with different voices
     for i, sentence_data in enumerate(st.session_state.mixed_voices_audio, 1):
-        st.markdown(f"#### Sentence {i}")
+        st.markdown(f"<div class='sentence-header'>✨ Sentence {i}</div>", unsafe_allow_html=True)
+        st.markdown("<div class='voice-card'>", unsafe_allow_html=True)
         col1, col2 = st.columns([1, 3])
         
         with col1:
             st.markdown(f"""
             <p class='voice-name'>{sentence_data['voice']}</p>
-            <p class='voice-quality'>{sentence_data['config']['quality'].title()} Quality • {sentence_data['config']['gender'].title()}</p>
+            <p class='voice-quality'>✨ {sentence_data['config']['quality'].title()} Quality<br>
+            👤 {sentence_data['config']['gender'].title()}</p>
             """, unsafe_allow_html=True)
         
         with col2:
             st.audio(sentence_data['audio'], format="audio/wav")
+        st.markdown("</div>", unsafe_allow_html=True)
     
     # Join audio button
     if st.button("🔗 Join All Audio", type="primary", use_container_width=True):
@@ -413,6 +575,7 @@ if 'mixed_voices_audio' in st.session_state and st.session_state.mixed_voices_au
 
 # Joined audio output section
 if 'joined_audio' in st.session_state:
-    st.markdown("---")
-    st.markdown("### Complete Audio")
-    st.audio(st.session_state.joined_audio, format="audio/wav") 
+    st.markdown("<h3 class='section-header'>🎵 Complete Audio</h3>", unsafe_allow_html=True)
+    st.markdown("<div class='voice-card'>", unsafe_allow_html=True)
+    st.audio(st.session_state.joined_audio, format="audio/wav")
+    st.markdown("</div>", unsafe_allow_html=True) 
